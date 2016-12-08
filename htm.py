@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from random import randint
+from random import randint, random, seed
 
 def gen_sensor_data():
     sd = []
@@ -17,7 +17,7 @@ def gen_pooler(dw,w=10,d=10):
     permanence = []
     for i in range(0,w):
         pooler.append([randint(0,1) for x in range(0,d)])
-        permanence.append([0.1 for x in range(0,dw)])
+        permanence.append([random() for x in range(0,dw)])
     return pooler, permanence
 
 sensor_data = gen_sensor_data()
@@ -28,5 +28,7 @@ print(permanence)
 
 # each pooler column sees all sensor_data values
 
+seed(7)
 for datum in sensor_data:
+    # compute overlap score for each column
     pass
