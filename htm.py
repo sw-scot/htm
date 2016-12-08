@@ -29,3 +29,4 @@ print(permanence)
 # each pooler column sees all sensor_data values
 
 for datum in sensor_data:
+    pass
