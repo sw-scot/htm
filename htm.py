@@ -57,5 +57,3 @@ for datum in sensor_data:
                 permanence[c][d] += 0.08
             elif 0 == datum[2] and permanence[c][d] >= threshold:
                 permanence[c][d] -= 0.03
-
-    # 
