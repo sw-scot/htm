@@ -39,16 +39,24 @@ def gen_potential_pool(data_width, column_count, connection_density):
     return potential_pool, dcell_cnxn_count
 
 data_width = 2**14
+column_count=2**11
+connection_density=0.5
 
-potential_pool, dcell_cnxn_count = gen_potential_pool(data_width=data_width, column_count=2**11, connection_density=0.5)
-potential_pool_vec = []
-for pool in potential_pool:
-    pool_vec = [0 for x in range(0,data_width)]
-    for cell in pool:
-        pool_vec[cell] = 1
-    potential_pool_vec.append(pool_vec)
+potential_pool, dcell_cnxn_count = gen_potential_pool(
+    data_width=data_width, column_count=column_count,
+    connection_density=connection_density)
 
-with open('ppool-pset.pkl','wb') as f:
-      pickle.dump(potential_pool,f)
-with open('ppool-vector.pkl','wb') as f:
-      pickle.dump(potential_pool_vec,f)
+dcell_counts = [count for cell, count in dcell_cnxn_count.items()]
+print(describe(dcell_counts))
+
+#potential_pool_vec = []
+#for pool in potential_pool:
+#    pool_vec = [0 for x in range(0,data_width)]
+#    for cell in pool:
+#        pool_vec[cell] = 1
+#    potential_pool_vec.append(pool_vec)
+
+#with open('ppool-pset.pkl','wb') as f:
+#      pickle.dump(potential_pool,f)
+#with open('ppool-vector.pkl','wb') as f:
+#      pickle.dump(potential_pool_vec,f)
