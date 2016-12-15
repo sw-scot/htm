@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from random import random, randint
-from math import floor
+from random import random, randint, shuffle
+from math import floor, ceil
+from copy import copy
 
 #-----------------------------------------------------------------------------------------------
 # Utility functions
@@ -30,23 +31,38 @@ def display_perms(mat):
 def gen_potential_pool(data_width, column_count, connection_density):
 
     # [column : [potential pool]]
+    potential_pool = [[] for _ in range(0,column_count)]
 
-    potential_pool = [
-        [1,1,1,1,1,0,0,0,0,0],
-        [0,1,1,1,1,1,0,0,0,0],
-        [0,0,1,1,1,1,1,0,0,0],
-        [0,0,0,1,1,1,1,1,0,0],
-        [0,0,0,0,1,1,1,1,1,0],
+    dcells_per_col = ceil(data_width * connection_density)
+    avg_col_per_dcell = (column_count * connection_density)
+    dcell_cnxn_count = {}
+    candidate_cells_template = [x for x in range(data_width)]
 
-        [0,0,0,0,0,1,1,1,1,1],
-        [1,0,0,0,0,0,1,1,1,1],
-        [1,1,0,0,0,0,0,1,1,1],
-        [1,1,1,0,0,0,0,0,1,1],
-        [1,1,1,1,0,0,0,0,0,1]]
+    for c in range(column_count):
+        candidate_cells = copy(candidate_cells_template)
+        shuffle(candidate_cells)
+        cnxn_set = set()
+        while len(cnxn_set) < dcells_per_col:
+            candidate = candidate_cells.pop(0)
+
+
+            if candidate not in dcell_cnxn_count:
+                dcell_cnxn_count[candidate] = 0
+
+            #if dcell_cnxn_count[candidate] > avg_col_per_dcell:
+            #    continue
+
+            if candidate not in cnxn_set:
+                dcell_cnxn_count[candidate] += 1
+                cnxn_set.add(candidate)
+
+        potential_pool[c] = [0 for x in range(0,data_width)]
+        for cell in cnxn_set:
+             potential_pool[c][cell] = 1
 
     return potential_pool
 
-def gen_connection_permanence(data_width, column_count,potential_pool):
+def gen_connection_permanence(data_width, column_count, potential_pool):
     connection_permanence = []
     for i in range(0,column_count):
         connection_permanence.append([random() * potential_pool[i][x] for x in range(0,data_width)])
@@ -80,11 +96,11 @@ PERMANENCE_THRESHOLD      = 0.2
 CONNECTION_PERMANENCE_INC = 0.03
 CONNECTION_PERMANENCE_DEC = 0.01
 
-COLUMN_COUNT              = 10
+COLUMN_COUNT              = 256
 COLUMN_CELL_COUNT         = 5
-COLUMN_CONNECTION_DENSITY = 50
+COLUMN_CONNECTION_DENSITY = 0.5
 
-DATA_WIDTH                = 100
+DATA_WIDTH                = 2048
 DATA_SAMPLE_COUNT         = 100
 DATA_SPARSITY             = 0.02
 
@@ -93,7 +109,6 @@ DATA_SPARSITY             = 0.02
 #-----------------------------------------------------------------------------------------------
 
 data                  = gen_data(DATA_WIDTH, DATA_SAMPLE_COUNT, DATA_SPARSITY)
-display_data(data)
 region                = gen_region(COLUMN_COUNT, COLUMN_CELL_COUNT)
 potential_pool        = gen_potential_pool(DATA_WIDTH, COLUMN_COUNT, COLUMN_CONNECTION_DENSITY)
 connection_permanence = gen_connection_permanence(DATA_WIDTH, COLUMN_COUNT, potential_pool)
@@ -110,7 +125,7 @@ connection_permanence = gen_connection_permanence(DATA_WIDTH, COLUMN_COUNT, pote
 #    col_active_count = total_active
 #
 
-display_perms(connection_permanence)
+#display_perms(connection_permanence)
 
 for d in data:
     col_active_count = [0,0,0,0,0,0,0,0,0,0]
@@ -144,4 +159,4 @@ for d in data:
                idx_col_active_at_max += 1
     print(winning_column)
 
-display_perms(connection_permanence)
+#display_perms(connection_permanence)
