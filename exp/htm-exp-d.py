@@ -52,7 +52,7 @@ class SpatialPooler():
 
     DATA_WIDTH                = 2048
     DATA_SAMPLE_COUNT         = 100
-    DATA_SPARSITY             = 0.02
+    DATA_SPARSITY             = 0.2
 
     def __init__(self):
         #-----------------------------------------------------------------------------------------------
@@ -128,25 +128,27 @@ class SpatialPooler():
 
     def find_winning_columns(self,col_active_count,top_percent):
         top_cols = []
-        hist = {}
+        cols_by_value = {}
         for col in range(len(col_active_count)):
-            if col_active_count[col] not in hist:
-                hist[col_active_count[col]] = []
-            hist[col_active_count[col]].append(col)
+            if col_active_count[col] not in cols_by_value:
+                cols_by_value[col_active_count[col]] = []
+            cols_by_value[col_active_count[col]].append(col)
 
-        value_buckets = sorted(list(set(hist.keys())))
-        print(value_buckets)
+        value_buckets = sorted(list(set(cols_by_value.keys())))
 
         value = value_buckets.pop()
+        values = []
+        values.append(value)
         while len(top_cols) < ceil(len(col_active_count) * top_percent):
-            if len(hist[value]) == 0:
+            if len(cols_by_value[value]) == 0:
                 value = value_buckets.pop()
-            for col in hist[value]:
+                values.append(value)
+            for col in cols_by_value[value]:
                 top_cols.append(col)
                 if len(top_cols) >= ceil(len(col_active_count) * top_percent):
                    break
 
-        return top_cols
+        return top_cols, values, value_buckets
 
     def compute_cols(self,d):
         """
@@ -187,5 +189,8 @@ if __name__ == "__main__":
     sp = SpatialPooler() 
     data = sp.gen_data(sp.DATA_WIDTH, sp.DATA_SAMPLE_COUNT, sp.DATA_SPARSITY)
     for d in data:
-        cols = sp.compute_cols(d)
-        print(cols) 
+        print("---")
+        cols, values, buckets = sp.compute_cols(d)
+        print("cols: ",cols) 
+        print("vals: ",values) 
+        print("bkts: ",values) 
