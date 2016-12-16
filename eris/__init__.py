@@ -1,51 +1,101 @@
-from random import random, randint, shuffle, seed
-from math import floor, ceil
-from copy import copy
 
 class HTM:
-    def __init__(self):
-        self.sp = SpatialPooler()
-        self.tp = TemporalPooler()
+    def __init__(self,config_name):
+        self.load_config(config_name)
+        self.sp = SpatialPooler(self.config)
+        self.tp = TemporalPooler(self.config)
 
+    def load_config(self,config_name):
+        import os
+        if not os.path.isdir('db/'+config_name):
+            print("Cannot find dir db/{}".format(config_name))
+        if not os.path.isfile('db/{}/config.py'.format(config_name)):
+            print("Cannot find file db/"+config_name+'/config.py')
+
+        from configparser import ConfigParser
+        config = ConfigParser()
+        config.read('db/{}/config.py'.format(config_name))
+        self.config = config['HTM']
+
+        self.config['SP_POTENTIAL_POOL_PKL'] = 'db/{}/sp_potential_pool.pkl'.format(config_name)
+        self.config['SP_CONNECTION_PERMANENCE_PKL'] = 'db/{}/sp_connection_permanence.pkl'.format(config_name)
+        self.config['TP_REGION_PKL'] = 'db/{}/tp_region.pkl'.format(config_name)
+        
 class TemporalPooler:
 
-    def __init__(self):
-        pass
+    def __init__(self,config):
+        self.config = config
+        self.COLUMN_COUNT              = int(config['COLUMN_COUNT'])
+        self.COLUMN_CELL_COUNT         = int(config['COLUMN_CELL_COUNT'])
+
+        self.load_region()
+       
+    def load_region(self):
+        import os, pickle
+        region = []
+        if os.path.isfile(self.config['TP_REGION_PKL']):
+            with open(self.config['TP_REGION_PKL'],"rb") as f:
+                self.region = pickle.load(f)
+        else:
+            self.region = self.gen_region(self.COLUMN_COUNT, self.COLUMN_CELL_COUNT)
+            with open(self.config['TP_REGION_PKL'],"wb") as f:
+                pickle.dump(self.region,f)
+
+    def gen_region(self, col_count, cell_count):
+        region = []
+        for i in range(0,col_count):
+            region.append([0 for x in range(0,cell_count)])
+        return region
 
     def propogate(self,cols):
         pass
 
+from random import random, randint, shuffle, seed
+from math import floor, ceil
+from copy import copy
 class SpatialPooler:
-    #-----------------------------------------------------------------------------------------------
-    # Network constants
-    #-----------------------------------------------------------------------------------------------
 
-    PERMANENCE_THRESHOLD      = 0.2
+    def __init__(self,config):
+        
+        self.config = config
 
-    CONNECTION_PERMANENCE_INC = 0.03
-    CONNECTION_PERMANENCE_DEC = 0.01
-
-    COLUMN_COUNT              = 256
-    COLUMN_CELL_COUNT         = 5
-    COLUMN_CONNECTION_DENSITY = 0.5
-    COLUMN_ACTIVATION_DENSITY = 0.02
-
-    DATA_WIDTH                = 2048
-    DATA_SAMPLE_COUNT         = 100
-    DATA_SPARSITY             = 0.2
-
-    def __init__(self):
         #-----------------------------------------------------------------------------------------------
-        # Create data structures
+        # Network constants
         #-----------------------------------------------------------------------------------------------
 
-        self.region                = self.gen_region(self.COLUMN_COUNT, self.COLUMN_CELL_COUNT)
-        self.potential_pool        = self.gen_potential_pool(self.DATA_WIDTH, self.COLUMN_COUNT, self.COLUMN_CONNECTION_DENSITY)
-        self.connection_permanence = self.gen_connection_permanence(self.DATA_WIDTH, self.COLUMN_COUNT, self.potential_pool)
+        self.PERMANENCE_THRESHOLD      = float(config['PERMANENCE_THRESHOLD'])
+        self.CONNECTION_PERMANENCE_INC = float(config['CONNECTION_PERMANENCE_INC'])
+        self.CONNECTION_PERMANENCE_DEC = float(config['CONNECTION_PERMANENCE_DEC'])
+
+        self.COLUMN_COUNT              = int(config['COLUMN_COUNT'])
+        self.COLUMN_CELL_COUNT         = int(config['COLUMN_CELL_COUNT'])
+        self.COLUMN_CONNECTION_DENSITY = float(config['COLUMN_CONNECTION_DENSITY'])
+        self.COLUMN_ACTIVATION_DENSITY = float(config['COLUMN_ACTIVATION_DENSITY'])
+
+        self.DATA_WIDTH                = int(config['DATA_WIDTH'])
+        self.DATA_SAMPLE_COUNT         = int(config['DATA_SAMPLE_COUNT'])
+        self.DATA_SPARSITY             = float(config['DATA_SPARSITY'])
+
+        #-----------------------------------------------------------------------------------------------
+        # Load/create data structures
+        #-----------------------------------------------------------------------------------------------
+
+        self.load_potential_pool()
+        self.load_connection_permanence()
 
     #-----------------------------------------------------------------------------------------------
     # Data structure generators
     #-----------------------------------------------------------------------------------------------
+
+    def load_potential_pool(self):
+        import os, pickle
+        if os.path.isfile(self.config['SP_POTENTIAL_POOL_PKL']):
+            with open(self.config['SP_POTENTIAL_POOL_PKL'],"rb") as f:
+                self.potential_pool = pickle.load(f)
+        else:
+            self.potential_pool = self.gen_potential_pool(self.DATA_WIDTH, self.COLUMN_COUNT, self.COLUMN_CONNECTION_DENSITY)
+            with open(self.config['SP_POTENTIAL_POOL_PKL'],"wb") as f:
+                pickle.dump(self.potential_pool,f)
 
     def gen_potential_pool(self, data_width, column_count, connection_density):
     
@@ -81,18 +131,21 @@ class SpatialPooler:
     
         return potential_pool
 
+    def load_connection_permanence(self):
+        import os, pickle
+        if os.path.isfile(self.config['SP_CONNECTION_PERMANENCE_PKL']):
+            with open(self.config['SP_CONNECTION_PERMANENCE_PKL'],"rb") as f:
+                self.connection_permanence = pickle.load(f)
+        else:
+            self.connection_permanence = self.gen_connection_permanence(self.DATA_WIDTH, self.COLUMN_COUNT, self.potential_pool)
+            with open(self.config['SP_CONNECTION_PERMANENCE_PKL'],"wb") as f:
+                pickle.dump(self.connection_permanence,f)
+
     def gen_connection_permanence(self, data_width, column_count, potential_pool):
         connection_permanence = []
         for i in range(0,column_count):
             connection_permanence.append([random()/2 * potential_pool[i][x] for x in range(0,data_width)])
         return connection_permanence
-
-
-    def gen_region(self, col_count, cell_count):
-        region = []
-        for i in range(0,col_count):
-            region.append([0 for x in range(0,cell_count)])
-        return region
 
 
     def gen_data(self, data_width, sample_count, data_sparsity):
@@ -115,6 +168,8 @@ class SpatialPooler:
             cols_by_value[col_active_count[col]].append(col)
 
         value_buckets = sorted(list(set(cols_by_value.keys())))
+        if len(value_buckets) == 1 and value_buckets[0] == 0:
+            return [], [], []
 
         value = value_buckets.pop()
         values = []
