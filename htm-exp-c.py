@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from random import random, randint, shuffle
+from random import random, randint, shuffle, seed
 from math import floor, ceil
 from copy import copy
 
@@ -72,7 +72,7 @@ def gen_potential_pool(data_width, column_count, connection_density):
 def gen_connection_permanence(data_width, column_count, potential_pool):
     connection_permanence = []
     for i in range(0,column_count):
-        connection_permanence.append([random() * potential_pool[i][x] for x in range(0,data_width)])
+        connection_permanence.append([random()/2 * potential_pool[i][x] for x in range(0,data_width)])
     return connection_permanence
 
 
@@ -94,6 +94,42 @@ def gen_data(data_width,sample_count,data_sparsity):
         data.append(d)
     return data
 
+def find_winning_column(col_active_count):
+    max_col_active_count = max(col_active_count)
+    cnt_col_active_at_max = col_active_count.count(max_col_active_count)
+    max_count_winner = randint(0,cnt_col_active_at_max-1)
+    idx_col_active_at_max = 0
+    for col in range(0,len(col_active_count)):
+        if col_active_count[col] == max_col_active_count:
+            if idx_col_active_at_max == max_count_winner:
+                winning_column = col
+                break
+            else:
+               idx_col_active_at_max += 1
+    return winning_column
+
+def find_winning_columns(col_active_count,top_percent):
+    top_cols = []
+    hist = {}
+    for col in range(len(col_active_count)):
+        if col_active_count[col] not in hist:
+            hist[col_active_count[col]] = []
+        hist[col_active_count[col]].append(col)
+
+    value_buckets = sorted(list(set(hist.keys())))
+    print(value_buckets)
+
+    value = value_buckets.pop()
+    while len(top_cols) < ceil(len(col_active_count) * top_percent):
+        if len(hist[value]) == 0:
+            value = value_buckets.pop()
+        for col in hist[value]:
+            top_cols.append(col)
+            if len(top_cols) >= ceil(len(col_active_count) * top_percent):
+               break
+
+    return top_cols
+
 #-----------------------------------------------------------------------------------------------
 # Network constants
 #-----------------------------------------------------------------------------------------------
@@ -106,6 +142,7 @@ CONNECTION_PERMANENCE_DEC = 0.01
 COLUMN_COUNT              = 256
 COLUMN_CELL_COUNT         = 5
 COLUMN_CONNECTION_DENSITY = 0.5
+COLUMN_ACTIVATION_DENSITY = 0.02
 
 DATA_WIDTH                = 2048
 DATA_SAMPLE_COUNT         = 100
@@ -134,9 +171,10 @@ connection_permanence = gen_connection_permanence(DATA_WIDTH, COLUMN_COUNT, pote
 
 #display_perms(connection_permanence)
 
+seed(7)
 for d in data:
-    col_active_count = [0,0,0,0,0,0,0,0,0,0]
-    for col in range(0,10):
+    col_active_count = [0 for _ in range(0,COLUMN_COUNT)]
+    for col in range(0,COLUMN_COUNT):
         total_active = 0
         for cell_id in range(0,10):
             if d[cell_id] == 1 and connection_permanence[col][cell_id] > PERMANENCE_THRESHOLD:
@@ -153,17 +191,10 @@ for d in data:
                 if connection_permanence[col][cell_id] > 1:
                     connection_permanence[col][cell_id] = 1
         col_active_count[col] = total_active
-    max_col_active_count = max(col_active_count)
-    cnt_col_active_at_max = col_active_count.count(max_col_active_count)
-    max_count_winner = randint(0,cnt_col_active_at_max-1)
-    idx_col_active_at_max = 0
-    for col in range(0,len(col_active_count)):
-        if col_active_count[col] == max_col_active_count:
-            if idx_col_active_at_max == max_count_winner:
-                winning_column = col
-                break
-            else:
-               idx_col_active_at_max += 1
-    print(winning_column)
+    #winning_column = find_winning_column(col_active_count)
+    #print(winning_column)
+    winning_columns = find_winning_columns(col_active_count, COLUMN_ACTIVATION_DENSITY)
+    print(winning_columns)
+
 
 #display_perms(connection_permanence)
